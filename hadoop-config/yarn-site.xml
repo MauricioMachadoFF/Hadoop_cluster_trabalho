@@ -1,0 +1,107 @@
+<?xml version="1.0"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+<configuration>
+    <!-- Endereço do ResourceManager -->
+    <property>
+        <name>yarn.resourcemanager.hostname</name>
+        <value>hadoop-master</value>
+        <description>Hostname do ResourceManager</description>
+    </property>
+
+    <!-- Endereço da interface web do ResourceManager -->
+    <property>
+        <name>yarn.resourcemanager.webapp.address</name>
+        <value>0.0.0.0:8088</value>
+        <description>Interface web do ResourceManager</description>
+    </property>
+
+    <!-- Endereço do ResourceManager -->
+    <property>
+        <name>yarn.resourcemanager.address</name>
+        <value>hadoop-master:8032</value>
+        <description>Endereço do ResourceManager para submissão de aplicações</description>
+    </property>
+
+    <!-- Scheduler -->
+    <property>
+        <name>yarn.resourcemanager.scheduler.address</name>
+        <value>hadoop-master:8030</value>
+        <description>Endereço do scheduler</description>
+    </property>
+
+    <!-- Resource Tracker -->
+    <property>
+        <name>yarn.resourcemanager.resource-tracker.address</name>
+        <value>hadoop-master:8031</value>
+        <description>Endereço do resource tracker</description>
+    </property>
+
+    <!-- NodeManager services -->
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+        <description>Serviços auxiliares do NodeManager</description>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
+        <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+    </property>
+
+    <!-- Recursos do NodeManager -->
+    <property>
+        <name>yarn.nodemanager.resource.memory-mb</name>
+        <value>2048</value>
+        <description>Memória disponível em cada NodeManager (MB)</description>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.resource.cpu-vcores</name>
+        <value>2</value>
+        <description>Núcleos de CPU disponíveis em cada NodeManager</description>
+    </property>
+
+    <!-- Scheduler -->
+    <property>
+        <name>yarn.scheduler.minimum-allocation-mb</name>
+        <value>512</value>
+        <description>Memória mínima para containers (MB)</description>
+    </property>
+
+    <property>
+        <name>yarn.scheduler.maximum-allocation-mb</name>
+        <value>2048</value>
+        <description>Memória máxima para containers (MB)</description>
+    </property>
+
+    <!-- NodeManager address -->
+    <property>
+        <name>yarn.nodemanager.address</name>
+        <value>0.0.0.0:8041</value>
+    </property>
+
+    <!-- Log aggregation -->
+    <property>
+        <name>yarn.log-aggregation-enable</name>
+        <value>true</value>
+        <description>Habilita agregação de logs</description>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.remote-app-log-dir</name>
+        <value>/tmp/logs</value>
+        <description>Diretório de logs agregados no HDFS</description>
+    </property>
+</configuration>

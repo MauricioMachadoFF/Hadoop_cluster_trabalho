@@ -1,0 +1,13 @@
+Apache Hadoop is a collection of open-source software utilities
+that facilitates using a network of many computers to solve problems
+involving massive amounts of data and computation.
+It provides a software framework for distributed storage
+and processing of big data using the MapReduce programming model.
+Hadoop was originally designed for computer clusters
+built from commodity hardware.
+The core of Apache Hadoop consists of a storage part,
+known as Hadoop Distributed File System (HDFS),
+and a processing part which is a MapReduce programming model.
+Hadoop splits files into large blocks and distributes them
+across nodes in a cluster.
+Data processing is done in parallel on these distributed nodes.

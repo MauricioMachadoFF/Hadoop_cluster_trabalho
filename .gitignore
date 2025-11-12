@@ -1,0 +1,29 @@
+# Docker volumes
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+
+# Temporary files
+*.tmp
+tmp/
+
+# Screenshots (uncomment if you don't want to commit them)
+# screenshots/

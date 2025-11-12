@@ -1,0 +1,89 @@
+version: "3.8"
+
+services:
+  hadoop-master:
+    image: apache/hadoop:3.3.6
+    container_name: hadoop-master
+    hostname: hadoop-master
+    user: "root"
+    ports:
+      - "9870:9870"   # NameNode Web UI
+      - "8088:8088"   # ResourceManager Web UI
+      - "9000:9000"   # HDFS
+      - "19888:19888" # MapReduce JobHistory Server
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+      - HDFS_NAMENODE_USER=root
+      - HDFS_DATANODE_USER=root
+      - HDFS_SECONDARYNAMENODE_USER=root
+      - YARN_RESOURCEMANAGER_USER=root
+      - YARN_NODEMANAGER_USER=root
+    volumes:
+      - ./hadoop-config:/opt/hadoop/etc/hadoop
+      - ./start-master.sh:/start-master.sh
+      - hadoop-namenode:/hadoop/dfs/name
+      - hadoop-logs:/opt/hadoop/logs
+    networks:
+      - hadoop-network
+    command: bash /start-master.sh
+
+  hadoop-worker1:
+    image: apache/hadoop:3.3.6
+    container_name: hadoop-worker1
+    hostname: hadoop-worker1
+    user: "root"
+    depends_on:
+      - hadoop-master
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+      - HDFS_NAMENODE_USER=root
+      - HDFS_DATANODE_USER=root
+      - HDFS_SECONDARYNAMENODE_USER=root
+      - YARN_RESOURCEMANAGER_USER=root
+      - YARN_NODEMANAGER_USER=root
+    volumes:
+      - ./hadoop-config:/opt/hadoop/etc/hadoop
+      - ./start-worker.sh:/start-worker.sh
+      - hadoop-datanode1:/hadoop/dfs/data
+      - hadoop-logs-worker1:/opt/hadoop/logs
+    networks:
+      - hadoop-network
+    command: bash /start-worker.sh
+
+  hadoop-worker2:
+    image: apache/hadoop:3.3.6
+    container_name: hadoop-worker2
+    hostname: hadoop-worker2
+    user: "root"
+    depends_on:
+      - hadoop-master
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+      - HDFS_NAMENODE_USER=root
+      - HDFS_DATANODE_USER=root
+      - HDFS_SECONDARYNAMENODE_USER=root
+      - YARN_RESOURCEMANAGER_USER=root
+      - YARN_NODEMANAGER_USER=root
+    volumes:
+      - ./hadoop-config:/opt/hadoop/etc/hadoop
+      - ./start-worker.sh:/start-worker.sh
+      - hadoop-datanode2:/hadoop/dfs/data
+      - hadoop-logs-worker2:/opt/hadoop/logs
+    networks:
+      - hadoop-network
+    command: bash /start-worker.sh
+
+volumes:
+  hadoop-namenode:
+  hadoop-datanode1:
+  hadoop-datanode2:
+  hadoop-logs:
+  hadoop-logs-worker1:
+  hadoop-logs-worker2:
+
+networks:
+  hadoop-network:
+    driver: bridge
