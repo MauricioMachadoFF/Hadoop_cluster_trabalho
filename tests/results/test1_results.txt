@@ -1,0 +1,91 @@
+TESTE 1: Impacto do Fator de Replicação HDFS
+Data: Tue Nov 11 21:18:23 -03 2025
+========================================
+
+=== BASELINE (Replication=2) ===
+Timestamp: Tue Nov 11 21:18:43 -03 2025
+
+HDFS Status:
+Configured Capacity: 67269853184 (62.65 GB)
+Present Capacity: 36946314050 (34.41 GB)
+DFS Remaining: 36732338176 (34.21 GB)
+DFS Used: 213975874 (204.06 MB)
+DFS Used%: 0.58%
+Replicated Blocks:
+	Under replicated blocks: 6
+	Blocks with corrupt replicas: 0
+	Missing blocks: 0
+	Missing blocks (with replication factor 1): 0
+	Low redundancy blocks with highest priority to recover: 0
+	Pending deletion blocks: 0
+Erasure Coded Block Groups: 
+	Low redundancy block groups: 0
+	Block groups with corrupt internal blocks: 0
+	Missing block groups: 0
+	Low redundancy blocks with highest priority to recover: 0
+	Pending deletion blocks: 0
+
+-------------------------------------------------
+Live datanodes (2):
+
+Name: 172.19.0.3:9866 (hadoop-worker2.trabalho_hadoop_hadoop-network)
+Hostname: hadoop-worker2
+Decommission Status : Normal
+Configured Capacity: 33634926592 (31.32 GB)
+DFS Used: 106987937 (102.03 MB)
+Non DFS Used: 13427076703 (12.50 GB)
+DFS Remaining: 18366152704 (17.10 GB)
+DFS Used%: 0.32%
+
+Arquivos de Teste:
+-rw-r--r--   2 root supergroup  104857600 2025-11-12 00:18 /test_replication/test_replication.txt
+
+Status dos Blocos:
+FSCK started by root (auth:SIMPLE) from /172.19.0.2 for path /test_replication at Wed Nov 12 00:18:54 UTC 2025
+
+/test_replication <dir>
+/test_replication/test_replication.txt 104857600 bytes, replicated: replication=2, 1 block(s):  OK
+0. BP-837862294-172.19.0.2-1762904566196:blk_1073741839_1015 len=104857600 Live_repl=2  [DatanodeInfoWithStorage[172.19.0.3:9866,DS-d3087832-8e03-40c3-9e26-8b7f881f56d3,DISK], DatanodeInfoWithStorage[172.19.0.4:9866,DS-3a504317-da44-4a78-9652-0c7b92a4817c,DISK]]
+
+
+Status: HEALTHY
+ Number of data-nodes:	2
+ Number of racks:		1
+ Total dirs:			1
+ Total symlinks:		0
+
+Replicated Blocks:
+ Total size:	104857600 B
+ Total files:	1
+ Total blocks (validated):	1 (avg. block size 104857600 B)
+ Minimally replicated blocks:	1 (100.0 %)
+ Over-replicated blocks:	0 (0.0 %)
+ Under-replicated blocks:	0 (0.0 %)
+ Mis-replicated blocks:		0 (0.0 %)
+ Default replication factor:	2
+ Average block replication:	2.0
+ Missing blocks:		0
+ Corrupt blocks:		0
+ Missing replicas:		0 (0.0 %)
+ Blocks queued for replication:	0
+
+Erasure Coded Block Groups:
+ Total size:	0 B
+ Total files:	0
+ Total block groups (validated):	0
+ Minimally erasure-coded block groups:	0
+ Over-erasure-coded block groups:	0
+ Under-erasure-coded block groups:	0
+ Unsatisfactory placement block groups:	0
+ Average block group size:	0.0
+ Missing block groups:		0
+ Corrupt block groups:		0
+ Missing internal blocks:	0
+ Blocks queued for replication:	0
+FSCK ended at Wed Nov 12 00:18:54 UTC 2025 in 44 milliseconds
+
+
+The filesystem under path '/test_replication' is HEALTHY
+
+----------------------------------------
+
