@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Reducer para WordCount usando Hadoop Streaming
 Lê pares (palavra, 1) do stdin e soma as contagens
@@ -14,7 +15,7 @@ def reducer():
     """
     for word, group in groupby(read_mapper_output(sys.stdin), itemgetter(0)):
         total_count = sum(count for _, count in group)
-        print(f"{word}\t{total_count}")
+        print("{0}\t{1}".format(word, total_count))
 
 def read_mapper_output(file):
     """

@@ -16,6 +16,24 @@ echo_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
 
+# Função para verificar safe mode
+wait_safe_mode() {
+    echo_info "Verificando se HDFS está pronto..."
+    local max_attempts=30
+    local attempt=0
+    while [ $attempt -lt $max_attempts ]; do
+        if docker exec hadoop-master hdfs dfsadmin -safemode get 2>/dev/null | grep -q "OFF"; then
+            echo_info "HDFS está pronto!"
+            return 0
+        fi
+        echo_info "Aguardando HDFS sair do safe mode... tentativa $((attempt+1))/$max_attempts"
+        sleep 3
+        attempt=$((attempt+1))
+    done
+    echo_info "Timeout aguardando safe mode"
+    return 1
+}
+
 # Coletar métricas do scheduler
 collect_scheduler_metrics() {
     local test_name=$1
@@ -77,6 +95,9 @@ EOF
     # Restart
     docker-compose restart hadoop-master
     sleep 40
+
+    # Aguardar HDFS sair do safe mode
+    wait_safe_mode
 }
 
 # Configuração com 3 filas (high, default, low)
@@ -158,6 +179,9 @@ EOF
     # Restart
     docker-compose restart hadoop-master
     sleep 40
+
+    # Aguardar HDFS sair do safe mode
+    wait_safe_mode
 }
 
 # Teste baseline
@@ -168,6 +192,9 @@ test_baseline() {
     echo "Data: $(date)" >> $RESULTS_FILE
     echo "========================================" >> $RESULTS_FILE
     echo "" >> $RESULTS_FILE
+
+    # Verificar se HDFS está pronto
+    wait_safe_mode
 
     apply_single_queue
     collect_scheduler_metrics "BASELINE (Single Queue)"
@@ -188,6 +215,9 @@ test_multi_queue() {
 # Teste de priorização
 test_priority() {
     echo_section "TESTE DE PRIORIZAÇÃO - Submeter Jobs em Diferentes Filas"
+
+    # Verificar safe mode antes das operações HDFS
+    wait_safe_mode
 
     # Preparar dados
     docker exec hadoop-master bash -c "
@@ -246,6 +276,10 @@ test_priority() {
 restore_config() {
     echo_section "Restaurando Configuração Original"
     apply_single_queue
+
+    # Aguardar HDFS sair do safe mode
+    wait_safe_mode
+
     echo_info "Configuração restaurada!"
 }
 

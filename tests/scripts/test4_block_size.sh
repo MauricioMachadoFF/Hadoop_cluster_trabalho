@@ -15,6 +15,24 @@ echo_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
 
+# Função para verificar safe mode
+wait_safe_mode() {
+    echo_info "Verificando se HDFS está pronto..."
+    local max_attempts=30
+    local attempt=0
+    while [ $attempt -lt $max_attempts ]; do
+        if docker exec hadoop-master hdfs dfsadmin -safemode get 2>/dev/null | grep -q "OFF"; then
+            echo_info "HDFS está pronto!"
+            return 0
+        fi
+        echo_info "Aguardando HDFS sair do safe mode... tentativa $((attempt+1))/$max_attempts"
+        sleep 3
+        attempt=$((attempt+1))
+    done
+    echo_info "Timeout aguardando safe mode"
+    return 1
+}
+
 collect_block_metrics() {
     local test_name=$1
     echo_section "Coletando Métricas de Blocos - $test_name"
@@ -86,6 +104,9 @@ EOF
     # Restart
     docker-compose restart hadoop-master hadoop-worker1 hadoop-worker2
     sleep 35
+
+    # Aguardar HDFS sair do safe mode
+    wait_safe_mode
 }
 
 create_test_file() {
@@ -106,6 +127,9 @@ test_baseline() {
     echo "========================================" >> $RESULTS_FILE
     echo "" >> $RESULTS_FILE
 
+    # Verificar se HDFS está pronto
+    wait_safe_mode
+
     # Criar arquivo de 200MB
     create_test_file 200 "blocktest_128mb.dat"
 
@@ -125,6 +149,9 @@ test_small() {
 
     apply_block_size "67108864"  # 64MB em bytes
 
+    # Verificar safe mode antes das operações HDFS
+    wait_safe_mode
+
     create_test_file 200 "blocktest_64mb.dat"
 
     docker exec hadoop-master bash -c "
@@ -142,6 +169,9 @@ test_large() {
     echo_section "TESTE LARGE - Block Size = 256MB"
 
     apply_block_size "268435456"  # 256MB em bytes
+
+    # Verificar safe mode antes das operações HDFS
+    wait_safe_mode
 
     create_test_file 512 "blocktest_256mb.dat"
 
@@ -163,6 +193,10 @@ restore_config() {
         mv hadoop-config/hdfs-site.xml.backup hadoop-config/hdfs-site.xml
         docker-compose restart hadoop-master hadoop-worker1 hadoop-worker2
         sleep 35
+
+        # Aguardar HDFS sair do safe mode
+        wait_safe_mode
+
         echo_info "Configuração restaurada!"
     fi
 }

@@ -31,11 +31,16 @@ collect_yarn_metrics() {
     docker exec hadoop-master yarn node -list 2>/dev/null >> $RESULTS_FILE
     echo "" >> $RESULTS_FILE
 
-    # Recursos do cluster
+    # Recursos do cluster - descobrir IDs dinâmicos dos nodes
     echo "Recursos do Cluster:" >> $RESULTS_FILE
-    docker exec hadoop-master yarn node -status hadoop-worker1:8041 2>/dev/null >> $RESULTS_FILE
-    docker exec hadoop-master yarn node -status hadoop-worker2:8041 2>/dev/null >> $RESULTS_FILE
-    echo "" >> $RESULTS_FILE
+
+    # Obter lista de node IDs dinamicamente
+    NODE_IDS=$(docker exec hadoop-master yarn node -list 2>/dev/null | grep -E "hadoop-worker[12]:" | awk '{print $1}')
+
+    for NODE_ID in $NODE_IDS; do
+        docker exec hadoop-master yarn node -status "$NODE_ID" 2>/dev/null >> $RESULTS_FILE
+        echo "" >> $RESULTS_FILE
+    done
 
     # Aplicações
     echo "Aplicações Ativas:" >> $RESULTS_FILE
@@ -44,6 +49,24 @@ collect_yarn_metrics() {
 
     echo "----------------------------------------" >> $RESULTS_FILE
     echo "" >> $RESULTS_FILE
+}
+
+# Função para verificar safe mode
+wait_safe_mode() {
+    echo_info "Verificando se HDFS está pronto..."
+    local max_attempts=30
+    local attempt=0
+    while [ $attempt -lt $max_attempts ]; do
+        if docker exec hadoop-master hdfs dfsadmin -safemode get 2>/dev/null | grep -q "OFF"; then
+            echo_info "HDFS está pronto!"
+            return 0
+        fi
+        echo_info "Aguardando HDFS sair do safe mode... tentativa $((attempt+1))/$max_attempts"
+        sleep 3
+        attempt=$((attempt+1))
+    done
+    echo_info "Timeout aguardando safe mode"
+    return 1
 }
 
 # Função para aplicar configuração de memória
@@ -107,12 +130,18 @@ EOF
     echo_info "Reiniciando cluster..."
     docker-compose restart hadoop-master hadoop-worker1 hadoop-worker2
     sleep 40
+
+    # Aguardar HDFS sair do safe mode
+    wait_safe_mode
 }
 
 # Função para executar job de teste
 run_test_job() {
     local job_name=$1
     echo_info "Executando job de teste: $job_name"
+
+    # Verificar safe mode antes das operações HDFS
+    wait_safe_mode
 
     # Criar dados de teste
     docker exec hadoop-master bash -c "
@@ -128,15 +157,15 @@ run_test_job() {
 
     # Executar WordCount
     echo_info "Executando WordCount..."
-    START_TIME=\$(date +%s)
+    START_TIME=$(date +%s)
 
     docker exec hadoop-master bash -c "
         hdfs dfs -rm -r -f /test_memory/output
         hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-*.jar wordcount /test_memory/input /test_memory/output
     " 2>&1 | tee -a $RESULTS_FILE
 
-    END_TIME=\$(date +%s)
-    DURATION=\$((END_TIME - START_TIME))
+    END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
 
     echo "" >> $RESULTS_FILE
     echo "Tempo de execução: ${DURATION}s" >> $RESULTS_FILE
@@ -151,6 +180,9 @@ test_baseline() {
     echo "Data: $(date)" >> $RESULTS_FILE
     echo "========================================" >> $RESULTS_FILE
     echo "" >> $RESULTS_FILE
+
+    # Verificar se HDFS está pronto
+    wait_safe_mode
 
     collect_yarn_metrics "BASELINE (Memory=2048MB)"
     run_test_job "baseline"
@@ -188,6 +220,10 @@ restore_config() {
         mv hadoop-config/yarn-site.xml.backup hadoop-config/yarn-site.xml
         docker-compose restart hadoop-master hadoop-worker1 hadoop-worker2
         sleep 40
+
+        # Aguardar HDFS sair do safe mode
+        wait_safe_mode
+
         echo_info "Configuração restaurada!"
     fi
 }

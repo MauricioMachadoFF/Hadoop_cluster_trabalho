@@ -65,13 +65,29 @@ apply_replication() {
     # Backup da configuração atual
     cp hadoop-config/hdfs-site.xml hadoop-config/hdfs-site.xml.backup
 
-    # Atualizar configuração
-    sed -i.bak "s/<value>.*<\/value>/<value>$rep_factor<\/value>/" hadoop-config/hdfs-site.xml
+    # Atualizar configuração - apenas o valor de dfs.replication
+    sed -i.bak "/<name>dfs.replication<\/name>/{n;s/<value>[^<]*<\/value>/<value>$rep_factor<\/value>/;}" hadoop-config/hdfs-site.xml
 
     # Restart cluster
     echo_info "Reiniciando cluster..."
     docker-compose restart hadoop-master hadoop-worker1 hadoop-worker2
-    sleep 30
+
+    # Aguardar HDFS sair do safe mode
+    echo_info "Aguardando HDFS sair do safe mode..."
+    sleep 45
+
+    # Verificar se saiu do safe mode
+    local max_attempts=20
+    local attempt=0
+    while [ $attempt -lt $max_attempts ]; do
+        if docker exec hadoop-master hdfs dfsadmin -safemode get 2>/dev/null | grep -q "OFF"; then
+            echo_info "HDFS saiu do safe mode!"
+            break
+        fi
+        echo_info "Aguardando... tentativa $((attempt+1))/$max_attempts"
+        sleep 3
+        attempt=$((attempt+1))
+    done
 }
 
 # Teste baseline
@@ -84,16 +100,49 @@ test_baseline() {
     echo "========================================" >> $RESULTS_FILE
     echo "" >> $RESULTS_FILE
 
+    # Aguardar HDFS sair do safe mode (se necessário)
+    echo_info "Verificando se HDFS está pronto..."
+    local max_attempts=30
+    local attempt=0
+    while [ $attempt -lt $max_attempts ]; do
+        if docker exec hadoop-master hdfs dfsadmin -safemode get 2>/dev/null | grep -q "OFF"; then
+            echo_info "HDFS está pronto!"
+            break
+        fi
+        echo_info "Aguardando HDFS sair do safe mode... tentativa $((attempt+1))/$max_attempts"
+        sleep 3
+        attempt=$((attempt+1))
+    done
+
     # Criar arquivo de teste
     create_test_file 100
 
+    # Verificar safe mode novamente antes das operações HDFS
+    echo_info "Verificando safe mode antes das operações..."
+    max_attempts=20
+    attempt=0
+    while [ $attempt -lt $max_attempts ]; do
+        if docker exec hadoop-master hdfs dfsadmin -safemode get 2>/dev/null | grep -q "OFF"; then
+            echo_info "Safe mode está OFF - pronto para operações!"
+            break
+        fi
+        echo_info "Aguardando safe mode... tentativa $((attempt+1))/$max_attempts"
+        sleep 3
+        attempt=$((attempt+1))
+    done
+
     # Upload para HDFS
-    echo_info "Fazendo upload para HDFS..."
+    echo_info "Fazendo upload para HDFS com replicação = 2..."
     docker exec hadoop-master bash -c "
         hdfs dfs -rm -r -f /test_replication
         hdfs dfs -mkdir -p /test_replication
         hdfs dfs -put /tmp/test_replication.txt /test_replication/
+        hdfs dfs -setrep -w 2 /test_replication/test_replication.txt
     "
+
+    # Aguardar replicação
+    echo_info "Aguardando criação de 2 réplicas..."
+    sleep 10
 
     # Coletar métricas
     collect_hdfs_metrics "BASELINE (Replication=2)"
@@ -109,15 +158,17 @@ test_rep1() {
     apply_replication 1
 
     # Criar novo arquivo
+    echo_info "Deletando arquivos antigos e criando novo arquivo..."
     docker exec hadoop-master bash -c "
         hdfs dfs -rm -r -f /test_replication
         hdfs dfs -mkdir -p /test_replication
-        hdfs dfs -setrep -w 1 /test_replication
         hdfs dfs -put /tmp/test_replication.txt /test_replication/
+        hdfs dfs -setrep -w 1 /test_replication/test_replication.txt
     "
 
     # Aguardar replicação
-    sleep 10
+    echo_info "Aguardando ajuste de replicação..."
+    sleep 15
 
     # Coletar métricas
     collect_hdfs_metrics "TEST_REP1 (Replication=1)"
@@ -125,29 +176,6 @@ test_rep1() {
     echo_info "Teste REP=1 concluído!"
 }
 
-# Teste com replicação = 3
-test_rep3() {
-    echo_section "TESTE REP=3 - Maior Disponibilidade"
-
-    # Aplicar configuração
-    apply_replication 3
-
-    # Criar novo arquivo
-    docker exec hadoop-master bash -c "
-        hdfs dfs -rm -r -f /test_replication
-        hdfs dfs -mkdir -p /test_replication
-        hdfs dfs -setrep -w 3 /test_replication
-        hdfs dfs -put /tmp/test_replication.txt /test_replication/
-    "
-
-    # Aguardar replicação (pode levar mais tempo)
-    sleep 15
-
-    # Coletar métricas
-    collect_hdfs_metrics "TEST_REP3 (Replication=3)"
-
-    echo_info "Teste REP=3 concluído!"
-}
 
 # Restaurar configuração original
 restore_config() {
@@ -156,7 +184,23 @@ restore_config() {
     if [ -f hadoop-config/hdfs-site.xml.backup ]; then
         mv hadoop-config/hdfs-site.xml.backup hadoop-config/hdfs-site.xml
         docker-compose restart hadoop-master hadoop-worker1 hadoop-worker2
-        sleep 30
+
+        # Aguardar HDFS sair do safe mode
+        echo_info "Aguardando HDFS sair do safe mode..."
+        sleep 45
+
+        local max_attempts=20
+        local attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+            if docker exec hadoop-master hdfs dfsadmin -safemode get 2>/dev/null | grep -q "OFF"; then
+                echo_info "HDFS saiu do safe mode!"
+                break
+            fi
+            echo_info "Aguardando... tentativa $((attempt+1))/$max_attempts"
+            sleep 3
+            attempt=$((attempt+1))
+        done
+
         echo_info "Configuração restaurada!"
     fi
 }
@@ -169,24 +213,19 @@ case "$1" in
     test_rep1)
         test_rep1
         ;;
-    test_rep3)
-        test_rep3
-        ;;
     restore)
         restore_config
         ;;
     all)
         test_baseline
         test_rep1
-        test_rep3
         restore_config
         ;;
     *)
-        echo "Uso: $0 {baseline|test_rep1|test_rep3|restore|all}"
+        echo "Uso: $0 {baseline|test_rep1|restore|all}"
         echo ""
         echo "  baseline  - Teste com configuração padrão (rep=2)"
         echo "  test_rep1 - Teste com replicação = 1"
-        echo "  test_rep3 - Teste com replicação = 3"
         echo "  restore   - Restaurar configuração original"
         echo "  all       - Executar todos os testes"
         exit 1

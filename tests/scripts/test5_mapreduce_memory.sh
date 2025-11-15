@@ -15,6 +15,24 @@ echo_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
 
+# Função para verificar safe mode
+wait_safe_mode() {
+    echo_info "Verificando se HDFS está pronto..."
+    local max_attempts=30
+    local attempt=0
+    while [ $attempt -lt $max_attempts ]; do
+        if docker exec hadoop-master hdfs dfsadmin -safemode get 2>/dev/null | grep -q "OFF"; then
+            echo_info "HDFS está pronto!"
+            return 0
+        fi
+        echo_info "Aguardando HDFS sair do safe mode... tentativa $((attempt+1))/$max_attempts"
+        sleep 3
+        attempt=$((attempt+1))
+    done
+    echo_info "Timeout aguardando safe mode"
+    return 1
+}
+
 collect_mr_metrics() {
     local test_name=$1
     echo_section "Coletando Métricas MapReduce - $test_name"
@@ -95,6 +113,16 @@ apply_mapreduce_memory() {
         <name>yarn.app.mapreduce.am.env</name>
         <value>HADOOP_MAPRED_HOME=/opt/hadoop</value>
     </property>
+
+    <property>
+        <name>mapreduce.map.env</name>
+        <value>HADOOP_MAPRED_HOME=/opt/hadoop</value>
+    </property>
+
+    <property>
+        <name>mapreduce.reduce.env</name>
+        <value>HADOOP_MAPRED_HOME=/opt/hadoop</value>
+    </property>
 </configuration>
 EOF
 
@@ -102,11 +130,17 @@ EOF
 
     docker-compose restart hadoop-master hadoop-worker1 hadoop-worker2
     sleep 40
+
+    # Aguardar HDFS sair do safe mode
+    wait_safe_mode
 }
 
 run_mapreduce_job() {
     local job_name=$1
     echo_info "Executando job MapReduce: $job_name"
+
+    # Verificar safe mode antes das operações HDFS
+    wait_safe_mode
 
     # Preparar dados
     docker exec hadoop-master bash -c "
@@ -123,7 +157,7 @@ run_mapreduce_job() {
     # Executar job com medição de tempo
     echo "" >> $RESULTS_FILE
     echo "Executando Job: $job_name" >> $RESULTS_FILE
-    START_TIME=\$(date +%s)
+    START_TIME=$(date +%s)
 
     docker exec hadoop-master bash -c "
         hdfs dfs -rm -r -f /test_mr_memory/output
@@ -134,8 +168,8 @@ run_mapreduce_job() {
     " >> $RESULTS_FILE 2>&1
 
     RESULT=$?
-    END_TIME=\$(date +%s)
-    DURATION=\$((END_TIME - START_TIME))
+    END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
 
     echo "" >> $RESULTS_FILE
     if [ $RESULT -eq 0 ]; then
@@ -160,6 +194,9 @@ test_baseline() {
     echo "Data: $(date)" >> $RESULTS_FILE
     echo "========================================" >> $RESULTS_FILE
     echo "" >> $RESULTS_FILE
+
+    # Verificar se HDFS está pronto
+    wait_safe_mode
 
     collect_mr_metrics "BASELINE (Map=512MB, Reduce=512MB)"
     run_mapreduce_job "baseline"
@@ -194,6 +231,10 @@ restore_config() {
         mv hadoop-config/mapred-site.xml.backup hadoop-config/mapred-site.xml
         docker-compose restart hadoop-master hadoop-worker1 hadoop-worker2
         sleep 40
+
+        # Aguardar HDFS sair do safe mode
+        wait_safe_mode
+
         echo_info "Configuração restaurada!"
     fi
 }

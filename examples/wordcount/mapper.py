@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Mapper para WordCount usando Hadoop Streaming
 Lê linhas do stdin e emite pares (palavra, 1)
@@ -20,7 +21,7 @@ def mapper():
         # Emite cada palavra com contagem 1
         for word in words:
             if word:  # Ignora strings vazias
-                print(f"{word}\t1")
+                print("{0}\t1".format(word))
 
 if __name__ == "__main__":
     mapper()
