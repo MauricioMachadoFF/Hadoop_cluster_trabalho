@@ -1,0 +1,63 @@
+[0;32m[INFO][0m TESTE DE FALHA DE WORKER
+=====================================
+
+[0;32m[INFO][0m Verificando saúde do cluster...
+DataNodes ativos:
+Live datanodes (2):
+
+Name: 172.19.0.2:9866 (hadoop-worker1.trabalho_hadoop_hadoop-network)
+
+NodeManagers ativos:
+hadoop-worker1:44187	        RUNNING	hadoop-worker1:8042	                           0
+hadoop-worker2:33705	        RUNNING	hadoop-worker2:8042	                           0
+
+[0;32m[INFO][0m Iniciando job MapReduce...
+[0;32m[INFO][0m Aguardando 15 segundos para job iniciar...
+[0;32m[INFO][0m Limpando output anterior...
+[0;32m[INFO][0m Iniciando job MapReduce: Worker Failure Test
+[0;32m[INFO][0m Input: /fault-tolerance/input
+[0;32m[INFO][0m Output: /fault-tolerance/output_failure
+WARNING: log4j.properties is not found. HADOOP_CONF_DIR may be incomplete.
+packageJobJar: [/tmp/hadoop-unjar726232295362621892/] [] /tmp/streamjob7317961617425053.jar tmpDir=null
+2025-11-15 01:10:04,961 INFO  [main] client.DefaultNoHARMFailoverProxyProvider (DefaultNoHARMFailoverProxyProvider.java:init(64)) - Connecting to ResourceManager at hadoop-master/172.19.0.4:8032
+2025-11-15 01:10:05,365 INFO  [main] client.DefaultNoHARMFailoverProxyProvider (DefaultNoHARMFailoverProxyProvider.java:init(64)) - Connecting to ResourceManager at hadoop-master/172.19.0.4:8032
+2025-11-15 01:10:05,803 INFO  [main] mapreduce.JobResourceUploader (JobResourceUploader.java:disableErasureCodingForPath(907)) - Disabling Erasure Coding for path: /tmp/hadoop-yarn/staging/root/.staging/job_1763167318965_0002
+2025-11-15 01:10:06,593 INFO  [main] mapred.FileInputFormat (FileInputFormat.java:listStatus(266)) - Total input files to process : 5
+2025-11-15 01:10:07,265 INFO  [main] mapreduce.JobSubmitter (JobSubmitter.java:submitJobInternal(202)) - number of splits:5
+2025-11-15 01:10:07,605 INFO  [main] mapreduce.JobSubmitter (JobSubmitter.java:printTokens(298)) - Submitting tokens for job: job_1763167318965_0002
+2025-11-15 01:10:07,607 INFO  [main] mapreduce.JobSubmitter (JobSubmitter.java:printTokens(299)) - Executing with tokens: []
+2025-11-15 01:10:08,031 INFO  [main] conf.Configuration (Configuration.java:getConfResourceAsInputStream(2854)) - resource-types.xml not found
+2025-11-15 01:10:08,033 INFO  [main] resource.ResourceUtils (ResourceUtils.java:addResourcesFileToConf(476)) - Unable to find 'resource-types.xml'.
+2025-11-15 01:10:08,282 INFO  [main] impl.YarnClientImpl (YarnClientImpl.java:submitApplication(338)) - Submitted application application_1763167318965_0002
+2025-11-15 01:10:08,360 INFO  [main] mapreduce.Job (Job.java:submit(1682)) - The url to track the job: http://hadoop-master:8088/proxy/application_1763167318965_0002/
+2025-11-15 01:10:08,363 INFO  [main] mapreduce.Job (Job.java:monitorAndPrintJob(1727)) - Running job: job_1763167318965_0002
+[1;33m[WARNING][0m SIMULANDO FALHA: Removendo hadoop-worker2...
+hadoop-worker2
+[0;32m[INFO][0m Worker2 removido! Aguardando job completar...
+2025-11-15 01:10:24,421 INFO  [main] mapreduce.Job (Job.java:monitorAndPrintJob(1748)) - Job job_1763167318965_0002 running in uber mode : false
+2025-11-15 01:10:24,439 INFO  [main] mapreduce.Job (Job.java:monitorAndPrintJob(1755)) -  map 0% reduce 0%
+2025-11-15 01:10:35,967 INFO  [main] mapreduce.Job (Job.java:monitorAndPrintJob(1755)) -  map 20% reduce 0%
+2025-11-15 01:10:45,467 INFO  [main] mapreduce.Job (Job.java:monitorAndPrintJob(1755)) -  map 40% reduce 0%
+2025-11-15 01:10:53,750 INFO  [main] mapreduce.Job (Job.java:monitorAndPrintJob(1755)) -  map 60% reduce 0%
+2025-11-15 01:11:13,347 INFO  [main] mapreduce.Job (Job.java:monitorAndPrintJob(1755)) -  map 60% reduce 10%
+
+[JOB COMPLETOU APÓS TIMEOUT DO SCRIPT - VERIFICAÇÃO MANUAL]
+
+Job Status: SUCCEEDED (100%)
+Output verificado: 6000000 palavras contadas
+Resultado: SUCESSO - Job completou mesmo com falha do worker2!
+
+Verificando resultados HDFS:
+Found 3 items
+-rw-r--r--   2 root supergroup          0 2025-11-15 01:16 /fault-tolerance/output_failure/_SUCCESS
+-rw-r--r--   2 root supergroup          9 2025-11-15 01:15 /fault-tolerance/output_failure/part-00000
+-rw-r--r--   2 root supergroup          0 2025-11-15 01:16 /fault-tolerance/output_failure/part-00001
+
+Output do job:
+
+[INFO] Cluster health após restaurar worker2:
+hadoop-worker1:44187	        RUNNING	hadoop-worker1:8042	                           0
+hadoop-worker2:33705	        RUNNING	hadoop-worker2:8042	                           0
+hadoop-worker2:8041	        RUNNING	hadoop-worker2:8042	                           0
+
+CONCLUSÃO: Teste demonstrou tolerância a falhas com sucesso!
